@@ -23,7 +23,17 @@ def create_post(request):
             image=image,
         )
 
-        return JsonResponse({"message": "Post created successfully."}, status=201)
+        post_data = {
+            "id": post.id,
+            "title": post.title,
+            "expiry_date": str(post.expiry_date),
+            "description": post.description,
+            "image": request.build_absolute_uri(post.image.url),
+            "created_at": str(post.created_at),
+            "user_id": post.user.id,
+        }
+
+        return JsonResponse({"message": "Post created successfully.", "data":post_data}, status=201)
 
     return JsonResponse({"error": "Invalid request method."}, status=405)
 

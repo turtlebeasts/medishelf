@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-^20ttwd=+^)e=)uh*j8gl5iam@v$n5vj#_emw6p830iq!5ux4#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["192.168.1.28","localhost", "127.0.0.1", "0.0.0.0"]
 
 
 # Application definition
@@ -128,10 +128,14 @@ AUTH_USER_MODEL = 'authentication.CustomUser'
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "http://192.168.1.22:5173",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
+    "http://192.168.1.22:5173",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+SESSION_COOKIE_SAMESITE = None
+SESSION_COOKIE_SECURE = False

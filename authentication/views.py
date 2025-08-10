@@ -1,14 +1,15 @@
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, login as django_login, logout as django_logout, get_user_model
 from django.http import JsonResponse
-from django.contrib.auth import get_user_model
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth import login as django_login
 from django.contrib.auth.decorators import login_required
-
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 import json
 
-
 User = get_user_model()
+
+@ensure_csrf_cookie
+def csrf_token(request):
+    """Send a CSRF token cookie to the client."""
+    return JsonResponse({"message": "CSRF cookie set"})
 
 @csrf_exempt
 def index(request):
@@ -22,10 +23,12 @@ def index(request):
                 return JsonResponse({"error": "Username and password are required."}, status=400)
 
             user = authenticate(username=username, password=password)
-
             if user is not None:
-                django_login(request, user)  # logs in the user (if using sessions)
-                return JsonResponse({"message": "Login successful."}, status=200)
+                django_login(request, user)  # session login
+                return JsonResponse({
+                    "message": "Login successful.",
+                    "user_id": user.id
+                }, status=200)
             else:
                 return JsonResponse({"error": "Invalid credentials."}, status=401)
 
@@ -39,13 +42,11 @@ def register_user(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-
             username = data.get("username")
             email = data.get("email")
             password = data.get("password")
             confirm_password = data.get("confirm_password")
 
-            # Basic validations
             if not all([username, email, password, confirm_password]):
                 return JsonResponse({"error": "All fields are required."}, status=400)
 
@@ -58,9 +59,7 @@ def register_user(request):
             if User.objects.filter(email=email).exists():
                 return JsonResponse({"error": "Email already registered."}, status=400)
 
-            # Create the user
-            user = User.objects.create_user(username=username, email=email, password=password)
-            user.save()
+            User.objects.create_user(username=username, email=email, password=password)
 
             return JsonResponse({"message": "User registered successfully."}, status=201)
 
@@ -69,11 +68,29 @@ def register_user(request):
 
     return JsonResponse({"error": "Only POST method allowed."}, status=405)
 
+@login_required
+def get_user(request, user_id):
+    if request.method == "GET":
+        try:
+            user = User.objects.get(pk=user_id)
+            return JsonResponse({
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "date_joined": user.date_joined.isoformat(),
+            })
+        except User.DoesNotExist:
+            return JsonResponse({"error": "User not found"}, status=404)
+
+    return JsonResponse({"error": "Only GET method allowed."}, status=405)
 
 @login_required
-def get_user(request):
-    user = request.user
-    return JsonResponse({
-        "username": user.username,
-        "email": user.email,
-    })
+def logout_user(request):
+    if request.method == "POST":
+        django_logout(request)
+        return JsonResponse({"message": "Logged out successfully."})
+    return JsonResponse({"error": "Only POST method allowed."}, status=405)
+
+@csrf_exempt
+def test(request):
+    return JsonResponse({"data": "Hello"})
