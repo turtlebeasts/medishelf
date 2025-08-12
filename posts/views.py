@@ -2,6 +2,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from .models import MedicinePost
+from django.db.models import Q
 
 @csrf_exempt
 @login_required
@@ -50,6 +51,7 @@ def get_user_posts(request):
             "expiry_date": post.expiry_date,
             "image": request.build_absolute_uri(post.image.url),
             "created_at": post.created_at,
+            "user":post.user.id
         }
         for post in posts
     ]
@@ -68,3 +70,41 @@ def delete_post(request, post_id):
             return JsonResponse({"error": "Post not found or unauthorized."}, status=404)
     else:
         return JsonResponse({"error": "Invalid request method"}, status=405)
+    
+
+@login_required
+def get_all_posts(request):
+    posts = MedicinePost.objects.all().order_by('-created_at')
+
+    posts_data = [
+        {
+            "id": post.id,
+            "title": post.title,
+            "description": post.description,
+            "expiry_date": post.expiry_date,
+            "image": request.build_absolute_uri(post.image.url),
+            "created_at": post.created_at,
+            "user": post.user.id,
+            "username": post.user.username
+        }
+        for post in posts
+    ]
+
+    return JsonResponse(posts_data, safe=False)
+
+
+def search_medicines(request):
+    query = request.GET.get('q', '').strip()
+
+    if not query:
+        return JsonResponse([], safe=False)
+
+    # Case-insensitive search on title or description
+    medicines = MedicinePost.objects.filter(
+        Q(title__icontains=query) | Q(description__icontains=query)
+    ).values('id', 'title')  # Only send necessary fields
+
+    # Rename `title` to `name` to match frontend's expected structure
+    results = [{"id": m["id"], "name": m["title"]} for m in medicines]
+
+    return JsonResponse(results, safe=False)
