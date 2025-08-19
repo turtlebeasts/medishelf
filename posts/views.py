@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from .models import MedicinePost
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 
 @csrf_exempt
 @login_required
@@ -108,3 +109,17 @@ def search_medicines(request):
     results = [{"id": m["id"], "name": m["title"]} for m in medicines]
 
     return JsonResponse(results, safe=False)
+
+
+def get_medicine_detail(request, pk):
+    post = get_object_or_404(MedicinePost, pk=pk)
+    data = {
+        "id": post.id,
+        "title": post.title,
+        "description": post.description,
+        "expiry_date": post.expiry_date,
+        "image": request.build_absolute_uri(post.image.url),
+        "created_at": post.created_at,
+        "username": post.user.username
+    }
+    return JsonResponse(data)
